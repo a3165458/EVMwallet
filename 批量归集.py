@@ -16,65 +16,63 @@ def save_accounts_to_excel(df, file_path):
 
 # 函数：生成ERC-20代币转账的data字段
 def generate_transfer_data(to_address, amount, decimals=18):
-    # ERC-20 transfer方法的标准方法ID，使用keccak
     method_id = w3.keccak(text="transfer(address,uint256)").hex()[:10]
-    # 转账接收地址，转换为32字节hex
     to_address_hex = to_address.lower().replace('0x', '').rjust(64, '0')
-    # 转账金额，考虑代币的小数位数
     amount_hex = hex(amount * (10 ** decimals))[2:].rjust(64, '0')
     return method_id + to_address_hex + amount_hex
 
-
-# Excel文件路径
-file_path = ''  # 更新为您的文件路径
+# 函数：获取ERC-20代币余额
+def get_token_balance(token_address, wallet_address):
+    method_id = w3.keccak(text="balanceOf(address)").hex()[:10]
+    wallet_address_hex = wallet_address.lower().replace('0x', '').rjust(64, '0')
+    data = method_id + wallet_address_hex
+    balance = w3.eth.call({'to': token_address, 'data': data})
+    return int(balance.hex(), 16)
 
 # 加载账户信息
+file_path = ''  # 更新为您的文件路径
 df_accounts = load_accounts_from_excel(file_path)
 
-# 指定接收代币的地址
+# 指定接收代币的地址和代币合约地址
 recipient_address = ''  # 更新为实际接收地址
-# 代币合约地址
 token_contract_address = ''  # 更新为代币合约地址
-# 转账金额
-amount = 10  # 更新为实际转账金额
-# 代币的小数位数
+amount = 5  # 更新为实际转账金额
 decimals = 18  # 根据代币实际情况更新
 
-
-
-# 过滤掉Address列为空的行
+# 过滤和准备
 df_accounts.dropna(subset=['Address'], inplace=True)
-
-# 填充'yes'列中的NaN值为0
 df_accounts['transfer'] = df_accounts['transfer'].fillna(0)
 
-# 对每个账户进行操作
 for index, account in df_accounts.iterrows():
-    # 现在可以安全地将'yes'列的值转换为整数，因为我们已经填充了所有的NaN值
     processed_flag = int(account['transfer'])
-    address = str(account['Address']).strip()  # 移除可能的空格
+    address = str(account['Address']).strip()
 
-    # 检查账户是否已经运行
     if processed_flag == 1:
         print(f"Account {address} is already processed. Skipping...")
         continue
 
-    # 检查地址是否为有效的以太坊地址
     if not Web3.is_address(address):
         print(f"Invalid address {address}. Skipping...")
         continue
 
+    balance = get_token_balance(token_contract_address, address)
+    if balance < amount * (10 ** decimals):
+        print(f"Insufficient balance in account {address}. Skipping...")
+        continue
+    
+    try:
+        current_gas_price = w3.eth.gas_price
+    except:
+        print("Error fetching current gas price. Using default.")
+        current_gas_price = w3.to_wei(5, 'gwei') 
+
     # 生成ERC-20代币转账的data字段
     data = generate_transfer_data(recipient_address, amount, decimals)
 
-    # 获取当前的平均Gas价格
-    current_gas_price = web3.eth.gas_price
-    print(f"当前的平均Gas价格: {current_gas_price}")
-
-    # 构建交易信息
+    # 构建交易字典
     tx = {
-        'chainId': ,#自己补充
-        'gas': 21000,
+        'chainId': 97,
+        'gas': 50000,
         'gasPrice': current_gas_price,
         'nonce': w3.eth.get_transaction_count(account['Address']),
         'to': token_contract_address,
