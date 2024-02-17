@@ -73,7 +73,7 @@ for index, account in df_accounts.iterrows():
 
     # 构建交易信息
     tx = {
-        'chainId': 97,
+        'chainId': ,#自己补充
         'gas': 21000,
         'gasPrice': current_gas_price,
         'nonce': w3.eth.get_transaction_count(account['Address']),
