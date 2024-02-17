@@ -1,6 +1,6 @@
 用于将EVM钱包地址进行批量归集
 
-前置条件:需要创建Excel 表格，对应列创建 transfer   address  private 信息
+前置条件:需要创建Excel 表格，对应列创建 transfer address  private 信息
 
 对于已经发送交易的地址会标注1，用以跳过检测，未发送交易的地址会标注0
 
